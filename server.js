@@ -52,7 +52,7 @@ var server = ws.createServer(function (conn) {
                     conn.sendText(JSON.stringify({
                         type: "NOTIFICATION",
                         clear: true,
-                        data: "Matt Urtnowski"
+                        data: "Matt Urtnowski<br>http://murtnowski.com<br>Murtnowski@gmail.com"
                     }));
                 } else if(str.match(/^START$/i)) {
                     conn.game.mode = "GAME";
