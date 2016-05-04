@@ -252,7 +252,7 @@ var server = ws.createServer(function (conn) {
                     });
 
                     topScores = topScores.sort(function(a, b) {
-                        return a.science - b.science;
+                        return b.science - a.science;
                     }).slice(0, 10);
 
                     conn.game.mode = "TITLE";
