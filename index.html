@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href='https://fonts.googleapis.com/css?family=VT323' rel='stylesheet' type='text/css'>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+        <script>
+            var client = new WebSocket('ws://localhost:8001/');
+
+            $(document).ready(function() {
+                $("#shell").focusout(function() {
+                     $("#shell").focus();
+                });
+
+                client.onopen = function (event) {
+                    console.log(event);
+                };
+
+                client.onmessage = function (event) {
+                    console.log(event);
+
+                    try {
+                        var json = JSON.parse(event.data);
+                        if(json.type === "COMMANDS") {
+                            $("#commands").empty();
+                            for(var i = 0; i < json.data.length; i++) {
+                                $("#commands").append("<li style='white-space: pre;'>" + json.data[i] + "</li>");
+                            }
+                        } else if(json.type === "TICK") {
+                            $("#tick-count").text(json.data.tickCount + (json.data.paused ? " (PAUSED)" : " (SPEED: " + json.data.speed + ")"));
+                        } else if(json.type === "NOTIFICATION") {
+                            if(json.clear)  {
+                                $("#notifications").empty();
+                            }
+
+                            if(json.data !== null) {
+                                if($("#notifications").children().length > 12)
+                                {
+                                    $("#notifications :first-child").remove();
+                                }
+                                $("#notifications").append("<li>" + json.data  + "</li>");
+                            }
+                        } else if(json.type === "PROMPT") {
+                            var prompt = $("<li>" + json.data  + "</li>").appendTo("#shell-prompt");
+                            setTimeout(function() {
+                                prompt.remove();
+                            }, json.ttl);
+                        } else if(json.type ==="GENERATORS") {
+                            $("#power td.online").text((json.data.power.online ? "Online" : "Offline"));
+                            $("#power td.health").text("(" + json.data.power.health.toFixed(2) + "%)");
+                            $("#food td.online").text((json.data.food.online ? "Online" : "Offline"));
+                            $("#food td.health").text("(" + json.data.food.health.toFixed(2) + "%)");
+                            $("#water td.online").text((json.data.water.online ? "Online" : "Offline"));
+                            $("#water td.health").text("(" + json.data.water.health.toFixed(2) + "%)");
+                            $("#oxygen td.online").text((json.data.oxygen.online ? "Online" : "Offline"));
+                            $("#oxygen td.health").text("(" + json.data.oxygen.health.toFixed(2) + "%)");
+                            $("#science td.online").text((json.data.science.online ? "Online" : "Offline"));
+                            $("#science td.health").text("(" + json.data.science.health.toFixed(2) + "%)");
+                        } else if(json.type ==="RESOURCES") {
+                            $("#power td.stockpile").text(json.data.power.toFixed(2));
+                            $("#food td.stockpile").text(json.data.food.toFixed(2));
+                            $("#water td.stockpile").text(json.data.water.toFixed(2));
+                            $("#oxygen td.stockpile").text(json.data.oxygen.toFixed(1) + "%");
+                            $("#science td.stockpile").text(json.data.science.toFixed(2));
+                        } else if(json.type ==="JOBS") {
+                            $("#jobs").empty();
+                            for(var i = 0; i < json.data.length; i++) {
+                                $("#jobs").append("<li style='white-space: pre;'>" + json.data[i] + "</li>");
+                            }
+                        } else if(json.type ==="PLAYERS") {
+                            $("#player1 td.job").text(json.data[0].job);
+                            $("#player1 td.health").text(json.data[0].health.toFixed(1) + "%");
+                            if(json.data[0].morale > 20) {
+                                $("#player1 td.morale").text(json.data[0].morale.toFixed(1) + "%");
+                            } else {
+                                $("#player1 td.morale").text("MADNESS");
+                            }
+                            $("#player1 td.status").text(json.data[0].status);
+                            $("#player2 td.job").text(json.data[1].job);
+                            $("#player2 td.health").text(json.data[1].health.toFixed(1) + "%");
+                            if(json.data[1].morale > 20) {
+                                $("#player2 td.morale").text(json.data[1].morale.toFixed(1) + "%");
+                            } else {
+                                $("#player2 td.morale").text("MADNESS");
+                            }
+                            $("#player2 td.status").text(json.data[1].status);
+                            $("#player3 td.job").text(json.data[2].job);
+                            $("#player3 td.health").text(json.data[2].health.toFixed(1) + "%");
+                            if(json.data[2].morale > 20) {
+                                $("#player3 td.morale").text(json.data[2].morale.toFixed(1) + "%");
+                            } else {
+                                $("#player3 td.morale").text("MADNESS");
+                            }
+                            $("#player3 td.status").text(json.data[2].status);
+                            $("#player4 td.job").text(json.data[3].job);
+                            $("#player4 td.health").text(json.data[3].health.toFixed(1) + "%");
+                            if(json.data[3].morale > 20) {
+                                $("#player4 td.morale").text(json.data[3].morale.toFixed(1) + "%");
+                            } else {
+                                $("#player4 td.morale").text("MADNESS");
+                            }
+                            $("#player4 td.status").text(json.data[3].status);
+                        }
+                    } catch(e) {
+                        console.log(e);
+                    }
+                };
+
+                client.onerror = function (event) {
+                    console.log(event);
+                };
+
+                client.onclose = function (event) {
+                    console.log(event);
+                };
+            });
+
+            function consoleInput(event) {
+                if(event.keyCode == 13) {
+                    var value = $("#shell").val();
+                    console.log("SENDING: " + value);
+                    client.send(value);
+                    $("#shell").val("");
+                }
+            }
+        </script>
+        <style>
+            body, input {
+                font-family: 'VT323';
+            }
+
+            .stockpile, .player td.health {
+                text-align: right;
+            }
+        </style>
+    </head>
+    <body>
+        <div style="position: fixed; top: 10px; left: 10px;" id="Players">
+            <div>Days of Operation: <span id="tick-count">0</span></div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Crew</th>
+                        <th>Job</th>
+                        <th>Health</th>
+                        <th>Morale</th>
+                         <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="player1" class="player"><td class="title">1</td><td class="job">NONE</td><td class="health">100.0%</td><td class="morale">100.0%</td><td class="status"></td></tr>
+                    <tr id="player2" class="player"><td class="title">2</td><td class="job">NONE</td><td class="health">100.0%</td><td class="morale">100.0%</td><td class="status"></td></tr>
+                    <tr id="player3" class="player"><td class="title">3</td><td class="job">NONE</td><td class="health">100.0%</td><td class="morale">100.0%</td><td class="status"></td></tr>
+                    <tr id="player4" class="player"><td class="title">4</td><td class="job">NONE</td><td class="health">100.0%</td><td class="morale">100.0%</td><td class="status"></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div style="position: fixed; top: 10px; right: 10px;" id="Resources">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Module</th>
+                        <th>Status</th>
+                        <th>Condition</th>
+                        <th>Stockpile</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="power"><td class="title">Power</td><td class="online">Offline</td><td class="health">(100%)</td><td class="stockpile">0.00</td></tr>
+                    <tr id="food"><td class="title">Food</td><td class="online">Offline</td><td class="health">(100%)</td><td class="stockpile">0.00</td></tr>
+                    <tr id="water"><td class="title">Water</td><td class="online">Offline</td><td class="health">(100%)</td><td class="stockpile">0.00</td></tr>
+                    <tr id="oxygen"><td class="title">Oxygen</td><td class="online">Offline</td><td class="health">(100%)</td><td class="stockpile">0.0%</td></tr>
+                    <tr id="science"><td class="title">Science</td><td class="online">Offline</td><td class="health">(100%)</td><td class="stockpile">0.00</td></tr>
+                </tbody>
+            </table>
+            <strong>Available Jobs</strong>
+            <ul id="jobs"></ul>
+        </div>
+        <div style="position: fixed; width: 40%; bottom: 10px; left: 10px;">
+            <strong>Available Commands</strong>
+            <ul id="commands"></ul>
+            <ul id="shell-prompt"></ul>
+            ><input id="shell" type="text" onkeypress="consoleInput(event)" style="outline: none; border: 0px solid; width: 90%;" autofocus/>
+        </div>
+        <ul style="position: fixed; width: 50%; bottom: 10px; right: 10px;" id="notifications"></ul>
+    </body>
+</html>
